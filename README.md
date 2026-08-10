@@ -102,11 +102,11 @@ The scanner is designed to reduce false positives using several safeguards:
 Clone the repository:
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/haseeb2006-bit/credential-leak-scanner.git
+cd credential-leak-scanner
 ```
 
-Requires Python 3.x.
+Requires Python 3.10 or later.
 
 ## Usage
 
@@ -184,6 +184,4 @@ Potential extensions include:
 
 ## License
 
-This project is for educational and portfolio purposes.
-
-License details will be added.
+This project is licensed under the [MIT License](LICENSE).
