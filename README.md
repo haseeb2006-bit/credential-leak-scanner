@@ -113,7 +113,7 @@ Requires Python 3.10 or later.
 The scanner can be used from the command line:
 
 ```bash
-secret-scanner scan example.py
+scanner scan example.py
 ```
 
 Example output:
