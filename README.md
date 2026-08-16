@@ -95,7 +95,7 @@ The scanner is designed to reduce false positives using several safeguards:
 * Minimum string length
 * Allowlists for approved values
 * Exclusion of common placeholder or example credentials
-* Configurable detection thresholds
+* Entropy threshold filtering
 
 ## Installation
 
@@ -113,7 +113,7 @@ Requires Python 3.10 or later.
 The scanner can be used from the command line:
 
 ```bash
-secret-scanner scan example.py
+python cli.py scan example.py
 ```
 
 Example output:
@@ -124,7 +124,8 @@ File: example.py
 Line: 5
 ```
 
-The CLI currently supports scanning a single file. Support for scanning entire directories and additional configuration options is planned.
+The CLI supports scanning both individual files and entire directories recursively.
+Additional configuration options are planned.
 
 ## Configuration
 
@@ -148,7 +149,7 @@ This provides a CI-level safety net in addition to local pre-commit protection.
 
 ## Testing
 
-The project includes automated tests covering detection logic and CLI behavior, with Git hook and CI integration tests planned as those features are completed.
+The project includes automated tests covering detection logic, directory scanning, allowlisting, exclusions, false-positive reduction, and file-handling edge cases. CLI, Git hook, and CI integration tests are planned as those features are completed.
 
 Test fixtures never contain real credentials. Only fake or officially documented example values are used.
 
