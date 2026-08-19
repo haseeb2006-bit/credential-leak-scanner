@@ -1,5 +1,6 @@
 import argparse
 from scanner import scan_path
+from config import load_config
 
 
 def display_results(results):
@@ -20,12 +21,19 @@ def main():
 
     scan_parser = subparsers.add_parser("scan")
     scan_parser.add_argument("path")
+    scan_parser.add_argument(
+        "--config",
+        default="config.json",
+        help="Path to config file (default: config.json)"
+    )
 
     args = parser.parse_args()
 
     if args.command == "scan":
+        config = load_config(args.config)
         results = scan_path(args.path)
         display_results(results)
+
 
 if __name__ == "__main__":
     main()
