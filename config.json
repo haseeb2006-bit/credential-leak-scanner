@@ -1,5 +1,4 @@
 {
-    "min_severity": "Low",
     "allowlist": [],
-    "excluded_paths": []
+    "excluded_dirs": []
 }

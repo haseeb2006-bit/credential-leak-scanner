@@ -1,42 +1,47 @@
-import os
 import json
-from config import load_config, filter_results
+from config import load_config
+from scanner import scan_path
 
 
 def test_load_valid_config(tmp_path):
     config_file = tmp_path / "config.json"
-    config_file.write_text(json.dumps({"min_severity": "HIGH"}))
+    config_file.write_text(json.dumps({"allowlist": ["ABC123"]}))
 
     result = load_config(str(config_file))
-    assert result["min_severity"] == "HIGH"
+    assert result["allowlist"] == ["ABC123"]
 
 
-def test_missing_config_falls_back_to_defaults(tmp_path):
-    missing_path = tmp_path / "does_not_exist.json"
-
-    result = load_config(str(missing_path))
-    assert result["min_severity"] == "LOW"
-
-
-def test_allowlist_filters_out_matching_type():
-    results = [
-        {"file": "a.py", "line": 1, "type": "AWS Access Key", "severity": "HIGH"},
-        {"file": "b.py", "line": 2, "type": "Test Key", "severity": "LOW"},
-    ]
-    config = {"allowlist": ["Test Key"], "excluded_paths": []}
-
-    filtered = filter_results(results, config)
-    assert len(filtered) == 1
-    assert filtered[0]["type"] == "AWS Access Key"
+def test_missing_config_falls_back_to_defaults():
+    result = load_config("does_not_exist.json")
+    assert result["allowlist"] == []
+    assert result["excluded_dirs"] == []
 
 
-def test_excluded_paths_filters_out_matching_file():
-    results = [
-        {"file": "src/config.py", "line": 1, "type": "AWS Access Key", "severity": "HIGH"},
-        {"file": "tests/fake.py", "line": 2, "type": "AWS Access Key", "severity": "HIGH"},
-    ]
-    config = {"allowlist": [], "excluded_paths": ["tests/"]}
+def test_allowlist_is_passed_to_scan_path(tmp_path):
+    # create a temp file containing a fake AWS key
+    test_file = tmp_path / "secret.py"
+    test_file.write_text('aws_key = "AKIAABCDEFGHIJKLMNOP"')
 
-    filtered = filter_results(results, config)
-    assert len(filtered) == 1
-    assert filtered[0]["file"] == "src/config.py"
+    # without allowlist, it should be detected
+    results = scan_path(str(test_file))
+    assert len(results) == 1
+
+    # with the exact value allowlisted, it should be skipped
+    results = scan_path(str(test_file), allowlist=["AKIAABCDEFGHIJKLMNOP"])
+    assert len(results) == 0
+
+
+def test_excluded_dirs_is_passed_to_scan_path(tmp_path):
+    # create a subfolder named "tests" containing a fake secret
+    excluded_folder = tmp_path / "tests"
+    excluded_folder.mkdir()
+    test_file = excluded_folder / "secret.py"
+    test_file.write_text('aws_key = "AKIAABCDEFGHIJKLMNOP"')
+
+    # without excluding it, the file should be found and scanned
+    results = scan_path(str(tmp_path))
+    assert len(results) == 1
+
+    # with "tests" excluded, it should be skipped entirely
+    results = scan_path(str(tmp_path), excluded_dirs=["tests"])
+    assert len(results) == 0

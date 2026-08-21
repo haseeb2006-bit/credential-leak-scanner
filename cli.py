@@ -31,7 +31,11 @@ def main():
 
     if args.command == "scan":
         config = load_config(args.config)
-        results = scan_path(args.path)
+        results = scan_path(
+            args.path,
+            allowlist=config["allowlist"],
+            excluded_dirs=config["excluded_dirs"]
+            )
         display_results(results)
 
 
