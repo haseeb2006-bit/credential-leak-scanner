@@ -27,7 +27,7 @@ def main():
 
     if args.command == "scan":
         if not os.path.exists(args.path):
-            print(f"Error: path '{args.path}' does not exist.")
+            print(f"Error: path '{args.path}' does not exist.", file=sys.stderr)
             sys.exit(2)
 
         results = scan_path(args.path)
@@ -37,6 +37,9 @@ def main():
             sys.exit(1)
         else:
             sys.exit(0)
+    else:
+        parser.print_help()
+        sys.exit(2)
 
 if __name__ == "__main__":
     main()
