@@ -45,3 +45,19 @@ def test_excluded_dirs_is_passed_to_scan_path(tmp_path):
     # with "tests" excluded, it should be skipped entirely
     results = scan_path(str(tmp_path), excluded_dirs=["tests"])
     assert len(results) == 0
+
+
+def test_invalid_allowlist_type_falls_back_to_default(tmp_path):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"allowlist": "not-a-list"}))
+
+    result = load_config(str(config_file))
+    assert result["allowlist"] == []
+
+
+def test_unknown_config_key_is_ignored(tmp_path):
+    config_file = tmp_path / "config.json"
+    config_file.write_text(json.dumps({"totally_made_up_key": "value"}))
+
+    result = load_config(str(config_file))
+    assert "totally_made_up_key" not in result
