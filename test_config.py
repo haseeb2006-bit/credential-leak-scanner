@@ -118,3 +118,8 @@ def test_excluded_dirs_with_nested_list_falls_back_to_default(tmp_path):
 
     result = load_config(str(config_file))
     assert result["excluded_dirs"] == []
+
+def test_config_path_is_directory_falls_back_to_defaults(tmp_path):
+    result = load_config(str(tmp_path))
+    assert result["allowlist"] == []
+    assert result["excluded_dirs"] == []

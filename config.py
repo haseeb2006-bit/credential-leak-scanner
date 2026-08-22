@@ -12,7 +12,7 @@ ALLOWED_KEYS = set(DEFAULT_CONFIG.keys())
 def validate_config(config):
     validated = config.copy()
 
-    # warn about any keys that aren't part of the known config schema
+    # drop any keys we don't recognize
     unknown_keys = set(validated.keys()) - ALLOWED_KEYS
     for key in unknown_keys:
         print(f"Warning: unknown config key '{key}' will be ignored.")
@@ -21,6 +21,7 @@ def validate_config(config):
     if not isinstance(validated.get("allowlist"), list):
         print("Warning: 'allowlist' must be a list. Ignoring invalid value.")
         validated["allowlist"] = DEFAULT_CONFIG["allowlist"]
+    # also check every item inside is actually a string, not just that it's a list
     elif not all(isinstance(item, str) for item in validated["allowlist"]):
         print("Warning: 'allowlist' must only contain strings. Ignoring invalid value.")
         validated["allowlist"] = DEFAULT_CONFIG["allowlist"]
@@ -39,18 +40,24 @@ def load_config(path="config.json"):
     if not os.path.exists(path):
         return DEFAULT_CONFIG.copy()
 
-    with open(path, "r") as f:
-        try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            print(f"Warning: '{path}' is not valid JSON. Using default configuration.")
-            return DEFAULT_CONFIG.copy()
+    # catches path being a directory (IsADirectoryError) or unreadable
+    # (PermissionError) — both are OSError subclasses
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Warning: '{path}' is not valid JSON. Using default configuration.")
+                return DEFAULT_CONFIG.copy()
+    except (OSError, UnicodeDecodeError):
+        print(f"Warning: could not read '{path}'. Using default configuration.")
+        return DEFAULT_CONFIG.copy()
 
+    # valid JSON doesn't guarantee it's an object — could be a list, string, etc.
     if not isinstance(data, dict):
         print(f"Warning: '{path}' must contain a JSON object at the top level. Using default configuration.")
         return DEFAULT_CONFIG.copy()
 
-    # fill in any missing keys with defaults, in case the file is incomplete
     config = DEFAULT_CONFIG.copy()
     config.update(data)
     return validate_config(config)
