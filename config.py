@@ -21,9 +21,15 @@ def validate_config(config):
     if not isinstance(validated.get("allowlist"), list):
         print("Warning: 'allowlist' must be a list. Ignoring invalid value.")
         validated["allowlist"] = DEFAULT_CONFIG["allowlist"]
+    elif not all(isinstance(item, str) for item in validated["allowlist"]):
+        print("Warning: 'allowlist' must only contain strings. Ignoring invalid value.")
+        validated["allowlist"] = DEFAULT_CONFIG["allowlist"]
 
     if not isinstance(validated.get("excluded_dirs"), list):
         print("Warning: 'excluded_dirs' must be a list. Ignoring invalid value.")
+        validated["excluded_dirs"] = DEFAULT_CONFIG["excluded_dirs"]
+    elif not all(isinstance(item, str) for item in validated["excluded_dirs"]):
+        print("Warning: 'excluded_dirs' must only contain strings. Ignoring invalid value.")
         validated["excluded_dirs"] = DEFAULT_CONFIG["excluded_dirs"]
 
     return validated
@@ -39,6 +45,10 @@ def load_config(path="config.json"):
         except json.JSONDecodeError:
             print(f"Warning: '{path}' is not valid JSON. Using default configuration.")
             return DEFAULT_CONFIG.copy()
+
+    if not isinstance(data, dict):
+        print(f"Warning: '{path}' must contain a JSON object at the top level. Using default configuration.")
+        return DEFAULT_CONFIG.copy()
 
     # fill in any missing keys with defaults, in case the file is incomplete
     config = DEFAULT_CONFIG.copy()
