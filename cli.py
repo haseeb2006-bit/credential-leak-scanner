@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 from scanner import scan_path
+from config import load_config
 
 
 def display_results(results):
@@ -21,7 +22,12 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
 
     scan_parser = subparsers.add_parser("scan")
-    scan_parser.add_argument("path", help = "The file or directory to scan for secrets")
+    scan_parser.add_argument("path", help="The file or directory to scan for secrets")
+    scan_parser.add_argument(
+        "--config",
+        default="config.json",
+        help="Path to config file (default: config.json)"
+    )
 
     args = parser.parse_args()
 
@@ -30,7 +36,12 @@ def main():
             print(f"Error: path '{args.path}' does not exist.", file=sys.stderr)
             sys.exit(2)
 
-        results = scan_path(args.path)
+        config = load_config(args.config)
+        results = scan_path(
+            args.path,
+            allowlist=config["allowlist"],
+            excluded_dirs=config["excluded_dirs"]
+        )
         display_results(results)
 
         if results:
