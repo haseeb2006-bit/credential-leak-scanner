@@ -33,12 +33,12 @@ Regex Detection + Entropy Detection
 CLI / Git Hook / GitHub Action
 ```
 
-The CLI, Git pre-commit hook, and GitHub Action are designed to call the same underlying scanner rather than duplicating detection logic.
+The CLI, Git pre-commit hook, and GitHub Action all call the same underlying scanner rather than duplicating detection logic.
 
 The scanner exposes a simple interface:
 
 ```python
-scan_path(path)
+scan_path(path, allowlist=None, excluded_dirs=None)
 ```
 
 which returns findings in a consistent format:
@@ -90,12 +90,14 @@ password
 
 ### False-Positive Reduction
 
-The scanner is designed to reduce false positives using several safeguards:
+The scanner reduces false positives using several safeguards:
 
 * Minimum string length
 * Allowlists for approved values
 * Exclusion of common placeholder or example credentials
 * Entropy threshold filtering
+* Skipping binary files
+* Skipping files larger than 5 MB
 
 ## Installation
 
@@ -108,12 +110,19 @@ cd credential-leak-scanner
 
 Requires Python 3.10 or later.
 
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Usage
 
-The scanner can be used from the command line:
+Scan a single file or an entire directory:
 
 ```bash
 python cli.py scan example.py
+python cli.py scan .
 ```
 
 Example output:
@@ -122,34 +131,83 @@ Example output:
 [HIGH] AWS Access Key detected
 File: example.py
 Line: 5
+
+Secret scan passed. No issues found.
 ```
 
-The CLI supports scanning both individual files and entire directories recursively.
-Additional configuration options are planned.
+Use a custom configuration file:
+
+```bash
+python cli.py scan . --config myconfig.json
+```
+
+If `--config` is not provided, the scanner looks for `config.json` in the current directory by default.
+
+If the given path doesn't exist, the CLI prints an error and exits with a non-zero status rather than reporting a false "clean" result.
+
+## Exit Codes
+
+The CLI returns the following exit codes, used by both the pre-commit hook and GitHub Actions to determine pass/fail:
+
+```text
+0 = scan completed successfully, no secrets found
+1 = secrets detected
+2 = invalid path or configuration error
+```
 
 ## Configuration
 
-The scanner is intended to support a configuration file allowing users to customize:
+Configuration is provided via a JSON file (default: `config.json`):
 
-* Entropy detection threshold
-* Excluded files and directories
-* Allowlisted values
+```json
+{
+    "allowlist": ["YOUR_APPROVED_KEY_VALUE_HERE"],
+    "excluded_dirs": ["fixtures", "generated"]
+}
+```
+
+* **`allowlist`** — exact secret values that should be ignored, e.g. known-safe example credentials used in documentation.
+* **`excluded_dirs`** — additional directory names to skip during scanning, on top of built-in defaults (`.git`, `.venv`, `venv`, `node_modules`, `dist`, `build`, `vendor`).
+
+If the config file is missing, malformed, or contains invalid values, the scanner logs a warning and falls back to safe defaults rather than failing.
 
 ## Git Pre-Commit Integration
 
-The project is being developed to include a Git pre-commit hook that scans staged files before a commit is allowed to complete.
+The project includes a pre-commit hook that scans only the files currently staged for commit — not the entire repository.
 
-This provides protection at the earliest point in the development workflow and helps prevent secrets from entering version control.
+To install it on your machine:
+
+```bash
+python install_hook.py
+```
+
+This writes the hook into `.git/hooks/pre-commit`, which Git automatically runs before every commit. Since `.git/hooks/` isn't tracked by Git, each contributor needs to run this once after cloning the repository.
+
+Behavior:
+
+* Newly added and modified staged files are scanned.
+* Deleted staged files are ignored.
+* If a secret is found, the commit is blocked and the findings are printed.
+* If the scan is clean, the commit proceeds normally.
 
 ## GitHub Actions
 
-A GitHub Actions workflow is planned to automatically scan Pull Requests.
-
-This provides a CI-level safety net in addition to local pre-commit protection.
+A GitHub Actions workflow (`.github/workflows/secret-scan.yml`) automatically runs the scanner on every Pull Request and on every push to `main`. It uses the same CLI as local development — no separate detection logic — and relies on the CLI's exit code to determine whether the check passes or fails.
 
 ## Testing
 
-The project includes automated tests covering detection logic, directory scanning, allowlisting, exclusions, false-positive reduction, and file-handling edge cases. CLI, Git hook, and CI integration tests are planned as those features are completed.
+The project includes automated tests (45 tests total, run via `pytest`) covering:
+
+* Detection logic, directory scanning, allowlisting, exclusions, false-positive reduction, and file-handling edge cases (`test_scanner.py`)
+* CLI behavior, including path validation and exit codes (`test_cli.py`)
+* Configuration loading and validation, including CLI-level integration tests (`test_config.py`)
+* Staged-file discovery for the pre-commit hook (`test_staged_files.py`)
+
+Run the full test suite with:
+
+```bash
+pytest
+```
 
 Test fixtures never contain real credentials. Only fake or officially documented example values are used.
 
@@ -181,7 +239,7 @@ Potential extensions include:
 ## Contributors
 
 * **Huma** — Detection Engine: pattern matching, entropy analysis, and false-positive reduction
-* **Haseeb** — CLI & Integration: command-line interface, Git hooks, GitHub Actions, and configuration
+* **Haseeb** — CLI & Integration: command-line interface, configuration, Git hooks, and GitHub Actions
 
 ## License
 
