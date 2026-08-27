@@ -1,4 +1,10 @@
 {
     "allowlist": [],
-    "excluded_dirs": []
+    "excluded_dirs": [
+        "test_cli.py",
+        "test_config.py",
+        "test_scanner.py",
+        "test_secret.py",
+        "test_staged_files.py"
+    ]
 }

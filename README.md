@@ -152,7 +152,7 @@ The CLI returns the following exit codes, used by both the pre-commit hook and G
 ```text
 0 = scan completed successfully, no secrets found
 1 = secrets detected
-2 = invalid path or configuration error
+2 = invalid path, CLI usage error, or Git/staged-scan failure
 ```
 
 ## Configuration
@@ -167,13 +167,13 @@ Configuration is provided via a JSON file (default: `config.json`):
 ```
 
 * **`allowlist`** — exact secret values that should be ignored, e.g. known-safe example credentials used in documentation.
-* **`excluded_dirs`** — additional directory names to skip during scanning, on top of built-in defaults (`.git`, `.venv`, `venv`, `node_modules`, `dist`, `build`, `vendor`).
+* **`excluded_dirs`** — additional directory or file names to skip during scanning, on top of built-in default directories (`.git`, `.venv`, `venv`, `node_modules`, `dist`, `build`, `vendor`). This project's own `config.json` uses it to exclude test fixture files that intentionally contain fake secrets.
 
-If the config file is missing, malformed, or contains invalid values, the scanner logs a warning and falls back to safe defaults rather than failing.
+If the config file is missing, the scanner falls back to safe defaults silently. If the file is present but malformed or contains invalid values, the scanner logs a warning and falls back to defaults rather than failing.
 
 ## Git Pre-Commit Integration
 
-The project includes a pre-commit hook that scans only the files currently staged for commit — not the entire repository.
+The project includes a pre-commit hook that scans only the files currently staged for commit — not the entire repository, and not the working-tree copy. It reads the exact content stored in Git's staging area (via `git show`), so a secret that's staged but later edited out of the working file is still caught, and an unstaged secret in the working file does not incorrectly block a clean commit.
 
 To install it on your machine:
 
@@ -181,27 +181,28 @@ To install it on your machine:
 python install_hook.py
 ```
 
-This writes the hook into `.git/hooks/pre-commit`, which Git automatically runs before every commit. Since `.git/hooks/` isn't tracked by Git, each contributor needs to run this once after cloning the repository.
+This writes the hook into `.git/hooks/pre-commit`, which Git automatically runs before every commit. Since `.git/hooks/` isn't tracked by Git, each contributor needs to run this once after cloning the repository. If a pre-commit hook already exists, `install_hook.py` will not overwrite it.
 
 Behavior:
 
-* Newly added and modified staged files are scanned.
+* Newly added and modified staged files are scanned using their exact staged content.
 * Deleted staged files are ignored.
 * If a secret is found, the commit is blocked and the findings are printed.
 * If the scan is clean, the commit proceeds normally.
+* If Git itself fails while reading staged files or content, the hook reports an error and blocks the commit rather than assuming a clean scan.
 
 ## GitHub Actions
 
-A GitHub Actions workflow (`.github/workflows/secret-scan.yml`) automatically runs the scanner on every Pull Request and on every push to `main`. It uses the same CLI as local development — no separate detection logic — and relies on the CLI's exit code to determine whether the check passes or fails.
+A GitHub Actions workflow (`.github/workflows/secret-scan.yml`) automatically runs on every Pull Request and on every push to `main`. It first runs the full test suite, then scans the entire repository (`python cli.py scan .`) using the same CLI as local development — no separate detection logic — and relies on the CLI's exit code to determine whether the check passes or fails.
 
 ## Testing
 
-The project includes automated tests (45 tests total, run via `pytest`) covering:
+The project includes automated tests (53 tests total, run via `pytest`) covering:
 
 * Detection logic, directory scanning, allowlisting, exclusions, false-positive reduction, and file-handling edge cases (`test_scanner.py`)
 * CLI behavior, including path validation and exit codes (`test_cli.py`)
 * Configuration loading and validation, including CLI-level integration tests (`test_config.py`)
-* Staged-file discovery for the pre-commit hook (`test_staged_files.py`)
+* Staged-file discovery, staged-content accuracy, and pre-commit hook behavior, including real Git integration tests (`test_staged_files.py`)
 
 Run the full test suite with:
 

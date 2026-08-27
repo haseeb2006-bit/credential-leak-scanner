@@ -12,9 +12,15 @@ def test_invalid_path_returns_exit_code_2():
     assert "does not exist" in result.stderr
 
 
-def test_file_with_secrets_returns_exit_code_1():
+def test_file_with_secrets_returns_exit_code_1(tmp_path):
+    # Use an explicit empty config here so this test checks the scanner's
+    # real detection behavior, independent of whatever the project's own
+    # config.json currently excludes (e.g. test fixtures excluded for CI).
+    empty_config = tmp_path / "empty_config.json"
+    empty_config.write_text('{"allowlist": [], "excluded_dirs": []}')
+
     result = subprocess.run(
-        [sys.executable, "cli.py", "scan", "test_secret.py"],
+        [sys.executable, "cli.py", "scan", "test_secret.py", "--config", str(empty_config)],
         capture_output=True,
         text=True
     )
