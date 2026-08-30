@@ -106,6 +106,8 @@ def test_low_entropy_secret_is_ignored(tmp_path):
 
 def test_placeholder_detection():
     assert is_placeholder("your_api_key_here") is True
+    assert is_placeholder("{github_token}") is True
+    assert is_placeholder("{jwt_token}") is True
     assert is_placeholder("X7testQ9mLp2Xa4") is False
     
 def test_placeholder_secret_is_ignored(tmp_path):
@@ -358,3 +360,45 @@ def test_multiple_aws_keys_on_same_line(tmp_path):
     ]
 
     assert len(aws_results) == 2
+    
+def test_github_token_template_placeholder_is_ignored(tmp_path):
+    test_file = tmp_path/"example.py"
+
+    test_file.write_text(
+        'GITHUB_TOKEN = "{github_token}"',
+        encoding="utf-8"
+    )
+
+    results = scan_path(test_file)
+
+    assert results == []
+
+
+def test_jwt_template_placeholder_is_ignored(tmp_path):
+    test_file = tmp_path/"example.py"
+
+    test_file.write_text(
+        'JWT_TOKEN = "{jwt_token}"',
+        encoding="utf-8"
+    )
+
+    results = scan_path(test_file)
+
+    assert results == []
+
+
+def test_real_generic_token_is_still_detected(tmp_path):
+    test_file = tmp_path/"example.py"
+
+    generic_value = "A9x7Kp2LmN8Qr5Vz"
+
+    test_file.write_text(
+        f'TOKEN = "{generic_value}"',
+        encoding="utf-8"
+    )
+
+    results = scan_path(test_file)
+
+    assert len(results) == 1
+    assert results[0]["type"] == "TOKEN"
+    assert results[0]["severity"] == "MEDIUM"
