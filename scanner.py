@@ -3,6 +3,9 @@ import re
 from pathlib import Path
 
 # constants for regex patterns
+TEMPLATE_PLACEHOLDER_PATTERN = re.compile(
+    r"^\{[A-Za-z_][A-Za-z0-9_]*\}$"
+)
 AWS_ACCESS_KEY_PATTERN = re.compile(
     r"AKIA[A-Z0-9]{16}"
 )
@@ -85,7 +88,10 @@ PLACEHOLDER_VALUES = {
 }
 
 def is_placeholder(value):
-    return value.lower() in PLACEHOLDER_VALUES
+    return (
+        value.lower() in PLACEHOLDER_VALUES
+        or TEMPLATE_PLACEHOLDER_PATTERN.fullmatch(value) is not None
+    )
 
 def is_allowlisted(value, allowlist):
     if not allowlist:
