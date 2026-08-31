@@ -1,10 +1,16 @@
 {
-    "allowlist": [],
+    "allowlist": [
+        "AKIAIOSFODNN7EXAMPLE",
+        "AKIAABCDEFGHIJKLMNOP",
+        "AKIA1234567890ABCDEF",
+        "ghp_TESTONLY1234567890ABCDEF",
+        "ghp_FAKE1234567890ABCDEFGHIJK",
+        "github_pat_TESTONLY1234567890ABCDEFGHIJK",
+        "github_pat_FAKE1234567890ABCDEFGHIJK",
+        "X7pQ2mL9vA4z",
+        "eyJFAKEHEADER123.eyJFAKEPAYLOAD456.FAKESIGNATURE789"
+    ],
     "excluded_dirs": [
-        "test_cli.py",
-        "test_config.py",
-        "test_scanner.py",
-        "test_secret.py",
-        "test_staged_files.py"
+        "test_secret.py"
     ]
 }

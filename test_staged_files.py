@@ -370,3 +370,33 @@ def test_scan_staged_file_respects_excluded_dirs(tmp_path, monkeypatch):
     )
 
     assert results == []
+
+def test_scan_staged_file_not_affected_by_temp_path_exclusion(
+    tmp_path,
+    monkeypatch
+):
+    _init_repo(tmp_path)
+    monkeypatch.chdir(tmp_path)
+
+    test_file = tmp_path / "config.py"
+    test_file.write_text(
+        'AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"',
+        encoding="utf-8"
+    )
+
+    subprocess.run(
+        ["git", "add", "config.py"],
+        capture_output=True
+    )
+
+    # "tmp" is a common substring in OS temp file paths.
+    # If excluded_dirs were wrongly re-applied to the temp file,
+    # this secret would be missed.
+    results = scan_staged_file(
+        "config.py",
+        allowlist=set(),
+        excluded_dirs=["tmp"]
+    )
+
+    assert len(results) == 1
+    assert results[0]["type"] == "AWS Access Key"

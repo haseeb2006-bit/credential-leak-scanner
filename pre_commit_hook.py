@@ -9,11 +9,6 @@ from cli import display_results
 
 
 def scan_staged_file(filename, allowlist, excluded_dirs):
-    # Check exclusion against the ORIGINAL file path before flattening
-    # it into a temp file — otherwise a staged file inside an excluded
-    # directory (e.g. "generated/config.py") would lose that folder
-    # structure once written to a flat temp file, and the exclusion
-    # would silently stop applying.
     effective_excluded_dirs = DEFAULT_EXCLUDED_DIRS | set(excluded_dirs or [])
     if is_excluded_path(Path(filename), effective_excluded_dirs):
         return []
@@ -31,10 +26,14 @@ def scan_staged_file(filename, allowlist, excluded_dirs):
         tmp_path = tmp.name
 
     try:
+        # excluded_dirs is intentionally NOT passed here — we already
+        # checked exclusion against the real staged filename above.
+        # Re-checking against the temp file's path could wrongly match
+        # (e.g. a user excluding "tmp" would accidentally skip every
+        # temp file, since OS temp paths often contain "tmp").
         results = scan_path(
             tmp_path,
-            allowlist=allowlist,
-            excluded_dirs=excluded_dirs
+            allowlist=allowlist
         )
 
         for result in results:
