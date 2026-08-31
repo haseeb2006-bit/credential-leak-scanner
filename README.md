@@ -166,8 +166,10 @@ Configuration is provided via a JSON file (default: `config.json`):
 }
 ```
 
-* **`allowlist`** — exact secret values that should be ignored, e.g. known-safe example credentials used in documentation.
-* **`excluded_dirs`** — additional directory or file names to skip during scanning, on top of built-in default directories (`.git`, `.venv`, `venv`, `node_modules`, `dist`, `build`, `vendor`). This project's own `config.json` uses it to exclude test fixture files that intentionally contain fake secrets.
+* **`allowlist`** — exact secret values that should be ignored, e.g. known-safe example credentials used in documentation or tests.
+* **`excluded_dirs`** — additional directory or file names to skip during scanning, on top of built-in default directories (`.git`, `.venv`, `venv`, `node_modules`, `dist`, `build`, `vendor`).
+
+This project's own `config.json` prefers the allowlist over exclusion wherever possible: known fake secret values (like the example AWS key and tokens used in tests) are allowlisted by exact value, so the files containing them are still fully scanned rather than skipped entirely. The one exception is `test_secret.py`, which is excluded by filename — it contains fake private keys, and the scanner currently has no way to allowlist a private key by exact value (see Limitations).
 
 If the config file is missing, the scanner falls back to safe defaults silently. If the file is present but malformed or contains invalid values, the scanner logs a warning and falls back to defaults rather than failing.
 
@@ -190,19 +192,22 @@ Behavior:
 * If a secret is found, the commit is blocked and the findings are printed.
 * If the scan is clean, the commit proceeds normally.
 * If Git itself fails while reading staged files or content, the hook reports an error and blocks the commit rather than assuming a clean scan.
+* Custom exclusions from `config.json` are checked against the real staged file path before scanning — not against the internal temporary file used to hold staged content — so an exclusion that happens to match a temp-path pattern (e.g. `"tmp"`) cannot accidentally cause a real secret to be missed.
 
 ## GitHub Actions
 
-A GitHub Actions workflow (`.github/workflows/secret-scan.yml`) automatically runs on every Pull Request and on every push to `main`. It first runs the full test suite, then scans the entire repository (`python cli.py scan .`) using the same CLI as local development — no separate detection logic — and relies on the CLI's exit code to determine whether the check passes or fails.
+A GitHub Actions workflow (`.github/workflows/secret-scan.yml`) automatically runs on every Pull Request and on every push to `main`. It first runs the full test suite, then scans the repository recursively (`python cli.py scan .`) using the same CLI as local development — no separate detection logic.
+
+The scan is subject to configured exclusions and allowlisted values, and the CLI's exit code determines whether the check passes or fails.
 
 ## Testing
 
-The project includes automated tests (53 tests total, run via `pytest`) covering:
+The project includes automated tests (58 tests total, run via `pytest`) covering:
 
 * Detection logic, directory scanning, allowlisting, exclusions, false-positive reduction, and file-handling edge cases (`test_scanner.py`)
 * CLI behavior, including path validation and exit codes (`test_cli.py`)
 * Configuration loading and validation, including CLI-level integration tests (`test_config.py`)
-* Staged-file discovery, staged-content accuracy, and pre-commit hook behavior, including real Git integration tests (`test_staged_files.py`)
+* Staged-file discovery, staged-content accuracy, and pre-commit hook behavior, including real Git integration tests and a regression test guarding against exclusions matching internal temp-file paths (`test_staged_files.py`)
 
 Run the full test suite with:
 
@@ -225,6 +230,7 @@ Test fixtures never contain real credentials. Only fake or officially documented
 * Entropy detection is heuristic and can produce false positives or miss low-entropy secrets.
 * Detection quality depends heavily on tuned thresholds and maintained pattern lists.
 * No scanner can guarantee 100% detection coverage.
+* The private-key detector matches on the key marker pattern (`-----BEGIN ... PRIVATE KEY-----`) rather than a specific extractable value, so private keys currently cannot be allowlisted by exact value the way tokens and API keys can — file-level exclusion is the only current workaround for intentional private-key fixtures.
 * Scanning existing Git history for secrets already committed in the past is a possible future extension and is not part of the current scope.
 
 ## Future Improvements
@@ -235,6 +241,7 @@ Potential extensions include:
 * JSON output
 * SARIF output
 * Custom user-defined regex rules
+* Allowlist support for private keys
 * Performance optimizations for large repositories
 
 ## Contributors
