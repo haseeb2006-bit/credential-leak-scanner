@@ -1,12 +1,26 @@
-# Git Secret & Credential Leak Scanner
+# Git Secret & Credential Leak Scanner 
 
-A Python-based DevSecOps tool that detects accidentally exposed credentials — API keys, tokens, passwords, and private keys — in source code before they reach version control. Built as a learning project by two developers to understand how tools like Gitleaks and TruffleHog work under the hood, and to practice secure software development as a team.
+A Python-based DevSecOps tool that detects accidentally exposed credentials in source code and can block staged secrets before they are committed to version control. Built as a learning project by two developers to understand how tools like Gitleaks and TruffleHog work under the hood, and to practice secure software development as a team.
+
+## Project Status
+
+**Current version:** 1.0  
+**Status:** Stable learning/portfolio release
+
+v1.0 includes:
+- recursive file and directory scanning
+- known-secret regex detection
+- entropy-based generic secret detection
+- allowlisting and exclusions
+- pre-commit scanning
+- GitHub Actions CI
+- 58 automated tests
 
 ## Why This Project?
 
 Leaked credentials are one of the most common and preventable causes of real-world security breaches. A single hardcoded API key pushed to a public repository can be found and exploited within minutes.
 
-This project explores how automated secret detection works — combining pattern matching with statistical analysis — and how that detection can be integrated directly into a developer's workflow, rather than discovered after the fact.
+This project explores how automated secret detection works, combining pattern matching with statistical analysis and how that detection can be integrated directly into a developer's workflow, rather than discovered after the fact.
 
 ## How It Works
 
@@ -20,17 +34,17 @@ Together, these methods allow the scanner to catch both well-known credential fo
 ## Architecture
 
 ```text
-Developer
-    ↓
-   CLI
-    ↓
- Scanner
-    ↓
+Developer / CI
+      ↓
+CLI / Pre-Commit Hook
+      ↓
+    Scanner
+      ↓
 Regex Detection + Entropy Detection
-    ↓
- Findings
-    ↓
-CLI / Git Hook / GitHub Action
+      ↓
+    Findings
+      ↓
+Console / Commit Block / CI Result
 ```
 
 The CLI, Git pre-commit hook, and GitHub Action all call the same underlying scanner rather than duplicating detection logic.
@@ -125,13 +139,17 @@ python cli.py scan example.py
 python cli.py scan .
 ```
 
-Example output:
+### Example: Secret Detected
 
 ```text
 [HIGH] AWS Access Key detected
 File: example.py
 Line: 5
+```
 
+### Example: Clean Scan
+
+```text
 Secret scan passed. No issues found.
 ```
 
@@ -221,7 +239,7 @@ Test fixtures never contain real credentials. Only fake or officially documented
 
 * This is an educational/portfolio project and is not intended to replace mature, production-grade tools such as Gitleaks or TruffleHog.
 * Test credentials are always fake or officially documented examples — never real secrets.
-* Detected values are intended to be masked in output rather than printed in full.
+* Detected secret values are not included in findings or printed to the console; findings report only the file, line number, type and severity.
 * Removing a secret from the current version of a file does not remove it from Git history; a leaked credential should always be treated as compromised and rotated.
 
 ## Limitations
@@ -235,14 +253,30 @@ Test fixtures never contain real credentials. Only fake or officially documented
 
 ## Future Improvements
 
-Potential extensions include:
+### Detection
+- More secret types
+- Custom regex rules
+- Rule-specific severity levels
+- Improved private-key handling
+- Additional template-placeholder formats
 
-* Git history scanning
-* JSON output
-* SARIF output
-* Custom user-defined regex rules
-* Allowlist support for private keys
-* Performance optimizations for large repositories
+### Git & CI
+- Git history scanning
+- SARIF output
+- Reusable GitHub Action
+- Native `pre-commit` framework support
+- Cross-platform CI
+
+### Performance
+- Concurrent file scanning
+- Caching unchanged files
+- `.gitignore` awareness
+- Large-repository benchmarking
+
+### Distribution
+- `pyproject.toml` packaging
+- `pip install` support
+- TestPyPI and PyPI publishing
 
 ## Contributors
 
